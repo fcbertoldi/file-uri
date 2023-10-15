@@ -1,0 +1,114 @@
+#!/usr/bin/env sh
+
+# Output a file path using the FILE URI scheme (file://host/path)
+#
+# Usage:
+#   file-uri [-z | --no-hostname] [-n <hostname> | --host=<hostname>] [-t] <path>
+#   file-uri [-z | --no-hostname] [-n <hostname> | --host=<hostname>] [-t] [-]
+#   file-uri -h | --help
+#
+# Options:
+#   -z --no-hostname      do not output hostname prefix (file:/path).
+#   -n --host=<hostname>  use <hostname> in the host part
+#   -t                    do not output the trailing newline
+#
+# Arguments:
+#   <path>  file path
+
+
+#!/bin/sh
+
+usage() {
+    script_name=$(basename "$0")
+    echo "Output a file path using the FILE URI scheme (file://host/path)"
+    echo ""
+    echo "Usage:"
+    echo "  $script_name [-z | --no-hostname] [-n <hostname> | --host=<hostname>] [--] <path>"
+    echo "  $script_name [-z | --no-hostname] [-n <hostname> | --host=<hostname>] [-]"
+    echo "  $script_name -h | --help"
+    echo ""
+    echo "Options:"
+    echo "  -z --no-hostname      do not output hostname prefix (file:/path)."
+    echo "  -n --host=<hostname>  use <hostname> in the host part."
+    echo "  -t                    do not output the trailing newline."
+    echo ""
+    echo "Arguments:"
+    echo "  <path>  file path"
+}
+
+no_hostname=false
+no_trailing_newline=false
+hostname=""
+
+# Parse command line options
+while getopts ":htzn:-:" opt; do
+  case "$opt" in
+    z)
+	no_hostname=true
+	;;
+    t)
+	no_trailing_newline=true
+	;;
+    n)
+	hostname="${OPTARG}"
+      ;;
+    h)
+	usage
+	exit 0
+	;;
+    -)
+      case "${OPTARG}" in
+        no-hostname)
+          no_hostname=true
+          ;;
+        host=*)
+          hostname="${OPTARG#*=}"
+          ;;
+        help)
+	    usage
+            exit 0
+            ;;
+        *)
+            echo "Error: Unknown option: --$OPTARG" >&2
+            exit 1
+          ;;
+      esac
+      ;;
+    \?)
+      echo "Error: Invalid option: -$OPTARG" >&2
+      exit 1
+      ;;
+    :)
+      echo "Error: Option -$OPTARG requires an argument." >&2
+      exit 1
+      ;;
+  esac
+done
+
+shift "$((OPTIND-1))"
+
+if [ -z "$1" ] || [ "$1" = "-" ]; then
+    if [ -t 0 ]; then
+	echo "Error: stdin not provided" >&2
+	exit 2
+    fi
+    path=$(cat -)
+else
+    path="$1"
+fi
+
+path="$(realpath "$path")"
+
+# Construct file URI
+if [ "$no_hostname" = true ]; then
+  uri="file:${path}"
+else
+  uri="file://${hostname}${path}"
+fi
+
+
+if [ "$no_trailing_newline" = true ]; then
+    echo -n "$uri"
+else
+    echo "$uri"
+fi
