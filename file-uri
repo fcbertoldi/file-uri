@@ -97,7 +97,8 @@ else
     path="$1"
 fi
 
-path="$(realpath "$path")"
+# Get the absolute path, and percent-encode whitespace in the path
+path="$(realpath "$path" | sed -e 's/ /%20/g')"
 
 # Construct file URI
 if [ "$no_hostname" = true ]; then
