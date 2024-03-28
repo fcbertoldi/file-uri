@@ -1,4 +1,7 @@
 test:
 	cram test.t
 
-.PHONY: test
+shellcheck:
+	shellcheck file-uri
+
+.PHONY: test shellcheck
