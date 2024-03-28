@@ -82,8 +82,11 @@ done
 shift "$((OPTIND-1))"
 
 
+# ls encloses with single quotes files containing whitespace
+UNQUOTE_EXPR="s/^'//;s/'$//"
+
 # Get the absolute path, and percent-encode whitespace in the path
-SED_EXPR="
+PERCENT_ENCODE_EXPR="
 s/\\$/%24/g;
 s/%/%25/g;
 s/ /%20/g;
@@ -108,7 +111,8 @@ s/\]/%5D/g;
 
 
 convert_path() {
-    path="$(realpath "$1" | sed -e "$SED_EXPR")"
+    unquoted="$(echo "$1" | sed "$UNQUOTE_EXPR")"
+    path="$(realpath "$unquoted" | sed -e "$PERCENT_ENCODE_EXPR")"
 
     # Construct file URI
     if [ "$no_hostname" = true ]; then
