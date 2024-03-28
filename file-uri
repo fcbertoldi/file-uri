@@ -1,9 +1,9 @@
 #!/usr/bin/env sh
 
-# Output a file path using the FILE URI scheme (file://host/path)
+# Output file paths using the FILE URI scheme (file://host/path)
 #
 # Usage:
-#   file-uri [-z | --no-hostname] [-n <hostname> | --host=<hostname>] [-t] <path>
+#   file-uri [-z | --no-hostname] [-n <hostname> | --host=<hostname>] [-t] <path>...
 #   file-uri [-z | --no-hostname] [-n <hostname> | --host=<hostname>] [-t] [-]
 #   file-uri -h | --help
 #
@@ -23,8 +23,8 @@ usage() {
     echo "Output a file path using the FILE URI scheme (file://host/path)"
     echo ""
     echo "Usage:"
-    echo "  $script_name [-z | --no-hostname] [-n <hostname> | --host=<hostname>] [--] <path>"
-    echo "  $script_name [-z | --no-hostname] [-n <hostname> | --host=<hostname>] [-]"
+    echo "  $script_name [-z | --no-hostname] [-n <hostname> | --host=<hostname>] [-t] [--] <path>..."
+    echo "  $script_name [-z | --no-hostname] [-n <hostname> | --host=<hostname>] [-t] [-]"
     echo "  $script_name -h | --help"
     echo ""
     echo "Options:"
@@ -87,15 +87,6 @@ done
 
 shift "$((OPTIND-1))"
 
-if [ -z "$1" ] || [ "$1" = "-" ]; then
-    if [ -t 0 ]; then
-	echo "Error: stdin not provided" >&2
-	exit 2
-    fi
-    path=$(cat -)
-else
-    path="$1"
-fi
 
 # Get the absolute path, and percent-encode whitespace in the path
 SED_EXPR="
@@ -121,18 +112,37 @@ s/\[/%5B/g;
 s/\]/%5D/g;
 "
 
-path="$(realpath "$path" | sed -e "$SED_EXPR")"
 
-# Construct file URI
-if [ "$no_hostname" = true ]; then
-  uri="file:${path}"
+convert_path() {
+    path="$(realpath "$1" | sed -e "$SED_EXPR")"
+
+    # Construct file URI
+    if [ "$no_hostname" = true ]; then
+	uri="file:${path}"
+    else
+	uri="file://${hostname}${path}"
+    fi
+
+
+    if [ "$no_trailing_newline" = true ]; then
+	echo -n "$uri"
+    else
+	echo "$uri"
+    fi
+}
+
+if [ -z "$1" ] || [ "$1" = "-" ]; then
+    if [ -t 0 ]; then
+	echo "Error: stdin not provided" >&2
+	exit 2
+    fi
+    while read -r path; do
+	convert_path "$path"
+    done
 else
-  uri="file://${hostname}${path}"
+    for path in "$@"; do
+	convert_path "$path"	
+    done
 fi
 
 
-if [ "$no_trailing_newline" = true ]; then
-    echo -n "$uri"
-else
-    echo "$uri"
-fi
