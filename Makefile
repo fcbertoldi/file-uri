@@ -1,5 +1,5 @@
 test:
-	cram test.t
+	./tests/cram.sh tests/test.t
 
 shellcheck:
 	shellcheck file-uri
